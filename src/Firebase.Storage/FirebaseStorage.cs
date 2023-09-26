@@ -1,4 +1,6 @@
-﻿namespace Firebase.Storage
+﻿using System.Net.Http;
+
+namespace Firebase.Storage
 {
     /// <summary>
     /// Entry class into firebase storage. 
@@ -10,8 +12,9 @@
         /// </summary>
         /// <param name="storageBucket"> Google storage bucket. E.g. 'your-bucket.appspot.com'. </param>
         /// <param name="options"> Optional settings. </param>
-        public FirebaseStorage(string storageBucket, FirebaseStorageOptions options = null)
+        public FirebaseStorage(HttpClient client, string storageBucket, FirebaseStorageOptions options = null)
         {
+            this.HttpClient = client;
             this.StorageBucket = storageBucket;
             this.Options = options ?? new FirebaseStorageOptions();
         }
@@ -33,6 +36,8 @@
             get;
             private set;
         }
+
+        public HttpClient HttpClient { get; private set; }
 
         /// <summary>
         /// Constructs firebase path to the file.

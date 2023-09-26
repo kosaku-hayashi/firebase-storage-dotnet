@@ -5,6 +5,7 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -32,7 +33,7 @@
         /// <returns> <see cref="FirebaseStorageTask"/> which can be used to track the progress of the upload. </returns>
         public FirebaseStorageTask PutAsync(Stream stream, CancellationToken cancellationToken, string mimeType = null)
         {
-            return new FirebaseStorageTask(this.storage.Options, this.GetTargetUrl(), this.GetFullDownloadUrl(), stream, cancellationToken, mimeType);
+            return new FirebaseStorageTask(storage.HttpClient, this.storage.Options, this.GetTargetUrl(), this.GetFullDownloadUrl(), stream, cancellationToken, mimeType);
         }
 
         /// <summary>
@@ -83,14 +84,12 @@
 
             try
             {
-                using (var http = await this.storage.Options.CreateHttpClientAsync().ConfigureAwait(false))
-                {
-                    var result = await http.DeleteAsync(url).ConfigureAwait(false);
+                var requestMessage = await this.storage.Options.CreateHttpRequestMessageAsync(HttpMethod.Delete,url).ConfigureAwait(false);
+                var result = await storage.HttpClient.SendAsync(requestMessage).ConfigureAwait(false);
 
-                    resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
+                resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
 
-                    result.EnsureSuccessStatusCode();
-                }
+                result.EnsureSuccessStatusCode();
             }
             catch (Exception ex)
             {
@@ -122,16 +121,14 @@
 
             try
             {
-                using (var http = await this.storage.Options.CreateHttpClientAsync().ConfigureAwait(false))
-                {
-                    var result = await http.GetAsync(url);
-                    resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var data = JsonConvert.DeserializeObject<T>(resultContent);
+                var requestMessage = await this.storage.Options.CreateHttpRequestMessageAsync(HttpMethod.Get,url).ConfigureAwait(false);
+                var result = await storage.HttpClient.SendAsync(requestMessage);
+                resultContent = await result.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var data = JsonConvert.DeserializeObject<T>(resultContent);
 
-                    result.EnsureSuccessStatusCode();
+                result.EnsureSuccessStatusCode();
 
-                    return data;
-                }
+                return data;
             }
             catch (Exception ex)
             {

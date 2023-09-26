@@ -16,9 +16,11 @@
 
         private readonly Task<string> uploadTask;
         private readonly Stream stream;
+        private HttpClient HttpClient;
 
-        public FirebaseStorageTask(FirebaseStorageOptions options, string url, string downloadUrl, Stream stream, CancellationToken cancellationToken, string mimeType = null)
+        public FirebaseStorageTask(HttpClient client, FirebaseStorageOptions options, string url, string downloadUrl, Stream stream, CancellationToken cancellationToken, string mimeType = null)
         {
+            this.HttpClient = client;
             this.TargetUrl = url;
             this.uploadTask = this.UploadFile(options, url, downloadUrl, stream, cancellationToken, mimeType);
             this.stream = stream;
@@ -32,7 +34,6 @@
             get;
             private set;
         }
-
 
         public string TargetUrl
         {
@@ -51,26 +52,29 @@
 
             try
             {
-                using (var client = await options.CreateHttpClientAsync())
+                var request = new HttpRequestMessage(HttpMethod.Post, url)
                 {
-                    var request = new HttpRequestMessage(HttpMethod.Post, url)
-                    {
-                        Content = new StreamContent(stream)
-                    };
+                    Content = new StreamContent(stream)
+                };
 
-                    if (!string.IsNullOrEmpty(mimeType))
-                    {
-                        request.Content.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
-                    }
-
-                    var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                    responseData = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-
-                    response.EnsureSuccessStatusCode();
-                    var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseData);
-
-                    return downloadUrl + data["downloadTokens"];
+                if(options.AuthTokenAsyncFactory != null)
+                {
+                    var auth = await options.AuthTokenAsyncFactory().ConfigureAwait(false);
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Firebase", auth);
                 }
+
+                if (!string.IsNullOrEmpty(mimeType))
+                {
+                    request.Content.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
+                }
+
+                var response = await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                responseData = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+                response.EnsureSuccessStatusCode();
+                var data = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseData);
+
+                return downloadUrl + data["downloadTokens"];
             }
             catch (TaskCanceledException)
             {
