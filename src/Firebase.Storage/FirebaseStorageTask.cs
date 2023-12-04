@@ -68,6 +68,14 @@
                     request.Content.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
                 }
 
+                if(options.CustomHeadersProvider != null)
+                {
+                    foreach(var customHeader in await options.CustomHeadersProvider())
+                    {
+                        request.Headers.Add(customHeader.name, customHeader.value);
+                    }
+                }
+
                 var response = await HttpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 responseData = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 

@@ -1,6 +1,8 @@
 ﻿namespace Firebase.Storage
 {
     using System;
+    using System.Collections;
+    using System.Collections.Generic;
     using System.Net.Http;
     using System.Threading.Tasks;
 
@@ -32,5 +34,7 @@
             get;
             set;
         }
+
+        public Func<Task<IEnumerable<(string name,string value)>>> CustomHeadersProvider { get; set; }
     }
 }
